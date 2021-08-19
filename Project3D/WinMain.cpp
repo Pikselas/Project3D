@@ -7,11 +7,10 @@ LRESULT WINAPI MyMsgPump(HWND handle, UINT msgcode, WPARAM wparam, LPARAM lparam
 	case WM_CLOSE:
 		PostQuitMessage(10);
 		break;
-	case WM_KILLFOCUS:
-		MessageBeep(MB_ICONERROR);
-		break;
-	case WM_SETFOCUS:
-		MessageBeep(MB_ICONEXCLAMATION);
+	case WM_CHAR:
+		static std::string ss;
+		ss.push_back(static_cast<char>(wparam));
+		SetWindowText(handle, ss.c_str());
 		break;
 	}
 	return DefWindowProc(handle, msgcode, wparam, lparam);
