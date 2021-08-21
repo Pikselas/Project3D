@@ -59,8 +59,34 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdsho
 
 	device->CreateRenderTargetView(backBuffer.Get(), nullptr, &target);
 
-	float col[] = { 1.0f,1.2f,0.0f,1.0f };
+	struct vertex
+	{
+		float x, y;
+	};
+	vertex vertices[] = {
+		{0.0f,0.5f},
+		{0.5f,-0.5f},
+		{-0.5f,-0.5f}
+	};
+	D3D11_BUFFER_DESC bdesc = { 0 };
+	bdesc.ByteWidth = sizeof(vertices);
+	bdesc.Usage = D3D11_USAGE_DEFAULT;
+	bdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bdesc.CPUAccessFlags = 0u;
+	bdesc.MiscFlags = 0u;
+	bdesc.StructureByteStride = sizeof(vertex);
 
+	D3D11_SUBRESOURCE_DATA sbrd = { 0 };
+	sbrd.pSysMem = vertices;
+
+	ComPtr<ID3D11Buffer> vertexBuffer;
+	device->CreateBuffer(&bdesc, &sbrd, &vertexBuffer);
+	UINT stride = sizeof(vertex);
+	UINT offset = 0u;
+	context->IASetVertexBuffers(0u, 1u, vertexBuffer.GetAddressOf(), &stride, &offset);
+
+
+	float col[] = { 1.0f,1.2f,0.0f,1.0f };
 	MSG msg;
 	while (true)
 	{
