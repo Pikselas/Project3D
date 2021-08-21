@@ -53,6 +53,13 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdsho
 	D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0u, nullptr, 0u, D3D11_SDK_VERSION, &scd, &swapchain,
 		&device, nullptr, &context);
 
+	ComPtr<ID3D11RenderTargetView> target;
+	ComPtr<ID3D11Resource> backBuffer;
+	swapchain->GetBuffer(0, __uuidof(ID3D11Resource), &backBuffer);
+
+	device->CreateRenderTargetView(backBuffer.Get(), nullptr, &target);
+
+
 	MSG msg;
 	while (true)
 	{
