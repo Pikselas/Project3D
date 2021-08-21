@@ -1,7 +1,9 @@
 #include<Windows.h>
 #include<d3d11.h>
 #include<wrl.h>
+#include<d3dcompiler.h>
 #pragma comment(lib,"d3d11.lib")
+#pragma comment(lib,"D3DCompiler.lib")
 LRESULT WINAPI customMsgPmp(HWND hndl, UINT msgcode, WPARAM wparam, LPARAM lparam)
 {
 	switch (msgcode)
@@ -84,6 +86,26 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdsho
 	UINT stride = sizeof(vertex);
 	UINT offset = 0u;
 	context->IASetVertexBuffers(0u, 1u, vertexBuffer.GetAddressOf(), &stride, &offset);
+
+	ComPtr<ID3DBlob> blobData;
+
+	ComPtr<ID3D11VertexShader> vShader;
+
+	D3DReadFileToBlob(L"VertexShader1.cso", &blobData);
+	device->CreateVertexShader(blobData->GetBufferPointer(), blobData->GetBufferSize(), nullptr, &vShader);
+	context->VSSetShader(vShader.Get(),nullptr,0u);
+	D3D11_INPUT_ELEMENT_DESC ied[] = {
+		{"POSITION",0u,DXGI_FORMAT_R32G32_FLOAT,0u,0u,D3D11_INPUT_PER_VERTEX_DATA,0}
+	};
+	ComPtr<ID3D11InputLayout> inpl;
+	device->CreateInputLayout(ied, 1u, blobData->GetBufferPointer(), blobData->GetBufferSize(), &inpl);
+	context->IASetInputLayout(inpl.Get());
+
+	D3DReadFileToBlob(L"PixelShader1.cso", &blobData);
+	ComPtr<ID3D11PixelShader> pShader;
+	device->CreatePixelShader(blobData->GetBufferPointer(), blobData->GetBufferSize(), nullptr, &pShader);
+	context->PSSetShader(pShader.Get(), nullptr, 0u);
+
 
 
 	float col[] = { 1.0f,1.2f,0.0f,1.0f };
