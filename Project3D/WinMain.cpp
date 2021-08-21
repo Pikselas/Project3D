@@ -14,5 +14,15 @@ int WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdshow)
 		800, 800, nullptr, nullptr, hinstance, nullptr);
 	ShowWindow(handle, SW_SHOW);
 
-	return 0;
+	MSG msg;
+	while (true)
+	{
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
+
+	return msg.wParam;
 }
