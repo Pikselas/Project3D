@@ -1,10 +1,22 @@
 #include<Windows.h>
-int WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdshow)
+
+LRESULT WINAPI customMsgPmp(HWND hndl, UINT msgcode, WPARAM wparam, LPARAM lparam)
+{
+	switch (msgcode)
+	{
+	case WM_CLOSE:
+		PostQuitMessage(10);
+		break;
+	}
+	return DefWindowProc(hndl, msgcode, wparam, lparam);
+}
+
+int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdshow)
 {
 	constexpr auto classNm = "ks_cls";
 	WNDCLASSEX wc = { 0 };
 	wc.cbSize = sizeof(wc);
-	wc.lpfnWndProc = DefWindowProc;
+	wc.lpfnWndProc = customMsgPmp;
 	wc.lpszClassName = classNm;
 	wc.hInstance = hinstance;
 	wc.style = CS_OWNDC;
@@ -21,6 +33,10 @@ int WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdshow)
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
+			if (msg.message == WM_QUIT)
+			{
+				break;
+			}
 		}
 	}
 
