@@ -2,6 +2,7 @@
 #include<d3d11.h>
 #include<wrl.h>
 #include<d3dcompiler.h>
+#include<sstream>
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib,"D3DCompiler.lib")
 LRESULT WINAPI customMsgPmp(HWND hndl, UINT msgcode, WPARAM wparam, LPARAM lparam)
@@ -106,6 +107,17 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdsho
 	device->CreatePixelShader(blobData->GetBufferPointer(), blobData->GetBufferSize(), nullptr, &pShader);
 	context->PSSetShader(pShader.Get(), nullptr, 0u);
 
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context->OMSetRenderTargets(1u, target.GetAddressOf(), nullptr);
+
+	D3D11_VIEWPORT vp = { 0 };
+	vp.TopLeftX = 0;
+	vp.TopLeftY = 0;
+	vp.Width = 800;
+	vp.Height = 800;
+	vp.MinDepth = 0u;
+	vp.MaxDepth = 1u;
+	context->RSSetViewports(1u, &vp);
 
 
 	float col[] = { 1.0f,1.2f,0.0f,1.0f };
@@ -123,6 +135,7 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdsho
 		}
 		swapchain->Present(1u, 0u);
 		context->ClearRenderTargetView(target.Get(), col);
+		context->Draw((UINT)std::size(vertices), 0u);
 	}
 
 	return msg.wParam;
