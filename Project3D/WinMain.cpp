@@ -59,6 +59,7 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdsho
 
 	device->CreateRenderTargetView(backBuffer.Get(), nullptr, &target);
 
+	float col[] = { 1.0f,1.2f,0.0f,1.0f };
 
 	MSG msg;
 	while (true)
@@ -72,6 +73,8 @@ int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR lpcmd, int cmdsho
 				break;
 			}
 		}
+		swapchain->Present(1u, 0u);
+		context->ClearRenderTargetView(target.Get(), col);
 	}
 
 	return msg.wParam;
