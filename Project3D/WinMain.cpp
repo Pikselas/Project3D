@@ -3,7 +3,8 @@
 #include<wrl.h>
 #include<d3dcompiler.h>
 #include<sstream>
-
+#pragma comment(lib,"d3d11.lib")
+#pragma comment(lib,"D3DCompiler.lib")
 LRESULT WINAPI customMsgPmp(HWND hndl, UINT msgcode, WPARAM wparam, LPARAM lparam)
 {
 	switch (msgcode)
