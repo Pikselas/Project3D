@@ -22,12 +22,4 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="VertexShader1.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="PixelShader1.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-  </ItemGroup>
 </Project>
