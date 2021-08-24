@@ -1,48 +1,124 @@
 #include<Windows.h>
-#include<sstream>
-LRESULT WINAPI MyMsgPump(HWND handle, UINT msgcode, WPARAM wparam, LPARAM lparam)
+#include<d3d11.h>
+#include<wrl.h>
+#include<d3dcompiler.h>
+#include<string>
+#include<chrono>
+#pragma comment(lib,"d3d11.lib")
+#pragma comment(lib,"D3DCompiler.lib")
+LRESULT _stdcall WndProc(HWND handle, UINT msgCode, WPARAM wparam, LPARAM lparam)
 {
-	switch (msgcode)
-	{
-	case WM_CLOSE:
-		PostQuitMessage(10);
-		break;
-	case WM_CHAR:
-		static std::string ss;
-		ss.push_back(static_cast<char>(wparam));
-		SetWindowText(handle, ss.c_str());
-		break;
-	}
-	return DefWindowProc(handle, msgcode, wparam, lparam);
+    if (msgCode == WM_CLOSE)
+    {
+        PostQuitMessage(0);
+    }
+    return DefWindowProc(handle, msgCode, wparam, lparam);
 }
-
-int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hPrevInstance, LPSTR lpcmd, int cmdshow)
+int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmdshow)
 {
-	constexpr auto classname = "ks_class";
 
-	WNDCLASSEX wc = { 0 };
-	wc.cbSize = sizeof(wc);
-	wc.lpfnWndProc = MyMsgPump;
-	wc.hInstance = hinstance;
-	wc.style = CS_OWNDC;
-	wc.lpszClassName = classname;
-	RegisterClassEx(&wc);
-	HWND hwnd = CreateWindowEx(0, classname, "KS_dx_Window", WS_CAPTION|WS_SYSMENU| WS_MINIMIZEBOX | WS_BORDER, CW_USEDEFAULT, CW_USEDEFAULT, 400, 400, nullptr,nullptr,hinstance, nullptr);
-	ShowWindow(hwnd, SW_SHOW);
-	MSG msg;
-	BOOL cptrd ;
-	//getmessage returns 0 on quitmessage else -1 if any error occurs
-	while (cptrd = GetMessage(&msg, nullptr, 0, 0) > 0)
-	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-	if (cptrd == -1)
-	{
-		return cptrd;
-	}
-	else
-	{
-     	return msg.wParam;
-	}
+    WNDCLASSEX wc = { 0 };
+    wc.cbSize = sizeof(wc);
+    wc.hInstance = hinstance;
+    wc.style = CS_OWNDC;
+    wc.lpfnWndProc = WndProc;
+    wc.lpszClassName = "Ks_Class";
+    RegisterClassEx(&wc);
+    HWND handle = CreateWindowEx(0, "Ks_Class", "_|KashiKichi|_", WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CAPTION, CW_USEDEFAULT, CW_USEDEFAULT, 1000, 850, nullptr, nullptr, hinstance, nullptr);
+    ShowWindow(handle, SW_SHOW);
+    MSG msg;
+    using namespace Microsoft::WRL;
+    ComPtr<ID3D11Device> graphics;
+    ComPtr<ID3D11DeviceContext> context;
+    ComPtr<IDXGISwapChain> swapchain;
+    ComPtr<ID3D11RenderTargetView> target;
+    DXGI_SWAP_CHAIN_DESC scd = { 0 };
+    scd.BufferCount = 1;
+    scd.BufferDesc.Width = 0;
+    scd.BufferDesc.Height = 0;
+    scd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    scd.BufferDesc.RefreshRate.Denominator = 0;
+    scd.BufferDesc.RefreshRate.Numerator = 0;
+    scd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+    scd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+    scd.Flags = 0u;
+    scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    scd.OutputWindow = handle;
+    scd.SampleDesc.Count = 1;
+    scd.SampleDesc.Quality = 0;
+    scd.Windowed = TRUE;
+    scd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0u, nullptr, 0u, D3D11_SDK_VERSION, &scd, &swapchain, &graphics, nullptr, &context);
+    ComPtr<ID3D11Resource> backBuffer;
+    swapchain->GetBuffer(0, __uuidof(ID3D11Resource), &backBuffer);
+    graphics->CreateRenderTargetView(backBuffer.Get(), nullptr, &target);
+    float color[] = { 0.5f, 1.5f, 0.0f, 1.0f };
+    while (true)
+    {
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT)
+                break;
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        struct vertex
+        {
+            float x, y;
+            unsigned char r, g, b, a;
+        };
+        vertex vertices[] = {
+            {0.0,0.5,255,0,0,0},
+            {0.5,-0.5,0,255,0,0},
+            {-0.5,-0.5,0,0,255,0},
+        };
+        D3D11_BUFFER_DESC bd = { 0 };
+        bd.ByteWidth = sizeof(vertices);
+        bd.Usage = D3D11_USAGE_DEFAULT;
+        bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        bd.CPUAccessFlags = 0u;
+        bd.MiscFlags = 0u;
+        bd.StructureByteStride = sizeof(vertex);
+        D3D11_SUBRESOURCE_DATA sd = { 0 };
+        sd.pSysMem = vertices;
+        ComPtr<ID3D11Buffer> VBuffer;
+        graphics->CreateBuffer(&bd, &sd, &VBuffer);
+        UINT stride = sizeof(vertex);
+        UINT offset = 0u;
+        context->IASetVertexBuffers(0u, 1u, VBuffer.GetAddressOf(), &stride, &offset);
+
+        ComPtr<ID3D11VertexShader> vS;
+        ComPtr<ID3DBlob> blb;
+        D3DReadFileToBlob(L"VertexShader.cso", &blb);
+        graphics->CreateVertexShader(blb->GetBufferPointer(), blb->GetBufferSize(), nullptr, &vS);
+        context->VSSetShader(vS.Get(), nullptr, 0u);
+
+        ComPtr<ID3D11InputLayout> inpl;
+        D3D11_INPUT_ELEMENT_DESC ied[] = {
+            {"POSITION",0,DXGI_FORMAT_R32G32_FLOAT,0,0,D3D11_INPUT_PER_VERTEX_DATA,0},
+            {"COLOR",0,DXGI_FORMAT_R8G8B8A8_UNORM,0,8u,D3D11_INPUT_PER_VERTEX_DATA,0}
+        };
+
+        graphics->CreateInputLayout(ied, (UINT)std::size(ied), blb->GetBufferPointer(), blb->GetBufferSize(), &inpl);
+        context->IASetInputLayout(inpl.Get());
+
+        ComPtr<ID3D11PixelShader> ps;
+        D3DReadFileToBlob(L"PixelShader.cso", &blb);
+        graphics->CreatePixelShader(blb->GetBufferPointer(), blb->GetBufferSize(), nullptr, &ps);
+        context->PSSetShader(ps.Get(), nullptr, 0u);
+        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        context->OMSetRenderTargets(1u, target.GetAddressOf(), nullptr);
+        D3D11_VIEWPORT vp = {};
+        vp.TopLeftX = 0;
+        vp.TopLeftY = 0;
+        vp.Width = 1000;
+        vp.Height = 850;
+        vp.MaxDepth = 1;
+        vp.MinDepth = 0;
+        context->RSSetViewports(1u, &vp);
+        swapchain->Present(1u, 0u);
+        context->ClearRenderTargetView(target.Get(), color);
+        context->Draw((UINT)std::size(vertices), 0u);
+    }
+    return 0;
 }
