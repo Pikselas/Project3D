@@ -2,15 +2,26 @@
 #include<d3d11.h>
 #include<wrl.h>
 #include<d3dcompiler.h>
-#include<string>
+#include<sstream>
 #include<chrono>
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib,"D3DCompiler.lib")
+
+float ptX = 0, ptY = 0;
 LRESULT _stdcall WndProc(HWND handle, UINT msgCode, WPARAM wparam, LPARAM lparam)
 {
     if (msgCode == WM_CLOSE)
     {
         PostQuitMessage(0);
+    }
+    else if (msgCode == WM_MOUSEMOVE)
+    {
+        POINTS pt = MAKEPOINTS(lparam);
+        ptX = (float)(pt.x - 500) / 1000 * 2 ;
+        ptY = (float)(pt.y - 425) / 850 * 2;
+        std::ostringstream ss;
+        ss << ptX << "," << ptY;
+        SetWindowText(handle, ss.str().c_str());
     }
     return DefWindowProc(handle, msgCode, wparam, lparam);
 }
@@ -52,7 +63,37 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
     ComPtr<ID3D11Resource> backBuffer;
     swapchain->GetBuffer(0, __uuidof(ID3D11Resource), &backBuffer);
     graphics->CreateRenderTargetView(backBuffer.Get(), nullptr, &target);
-    float color[] = { 0.5f, 1.5f, 0.0f, 1.0f };
+
+    ComPtr<ID3D11VertexShader> vS;
+    ComPtr<ID3DBlob> blb;
+    D3DReadFileToBlob(L"VertexShader.cso", &blb);
+    graphics->CreateVertexShader(blb->GetBufferPointer(), blb->GetBufferSize(), nullptr, &vS);
+    context->VSSetShader(vS.Get(), nullptr, 0u);
+
+    ComPtr<ID3D11InputLayout> inpl;
+    D3D11_INPUT_ELEMENT_DESC ied[] = {
+        {"POSITION",0,DXGI_FORMAT_R32G32_FLOAT,0,0,D3D11_INPUT_PER_VERTEX_DATA,0},
+        {"COLOR",0,DXGI_FORMAT_R8G8B8A8_UNORM,0,8u,D3D11_INPUT_PER_VERTEX_DATA,0}
+    };
+
+    graphics->CreateInputLayout(ied, (UINT)std::size(ied), blb->GetBufferPointer(), blb->GetBufferSize(), &inpl);
+    context->IASetInputLayout(inpl.Get());
+
+    ComPtr<ID3D11PixelShader> ps;
+    D3DReadFileToBlob(L"PixelShader.cso", &blb);
+    graphics->CreatePixelShader(blb->GetBufferPointer(), blb->GetBufferSize(), nullptr, &ps);
+    context->PSSetShader(ps.Get(), nullptr, 0u);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+    context->OMSetRenderTargets(1u, target.GetAddressOf(), nullptr);
+    D3D11_VIEWPORT vp = {};
+    vp.TopLeftX = 0;
+    vp.TopLeftY = 0;
+    vp.Width = 1000;
+    vp.Height = 850;
+    vp.MaxDepth = 1;
+    vp.MinDepth = 0;
+    context->RSSetViewports(1u, &vp);
+    float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     while (true)
     {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -68,9 +109,20 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
             unsigned char r, g, b, a;
         };
         vertex vertices[] = {
-            {0.0,0.5,255,0,0,0},
-            {0.5,-0.5,0,255,0,0},
-            {-0.5,-0.5,0,0,255,0},
+            {0.5f,0.5f,255,0,0},
+            {ptX,-ptY,0,255,0},
+
+            {-0.5f,-0.5f,100,255,0},
+            {ptX,-ptY,0,0,255},
+
+            {0.5f,-0.5f,105,0,102},
+            {ptX,-ptY,0,150,0},
+
+            {-0.5f,0.5f,10,30,20},
+            {ptX,-ptY,0,25,45},
+
+            {0.0f,0.0f,55,0,0},
+            {ptX,-ptY,0,120,0}
         };
         D3D11_BUFFER_DESC bd = { 0 };
         bd.ByteWidth = sizeof(vertices);
@@ -86,36 +138,6 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
         UINT stride = sizeof(vertex);
         UINT offset = 0u;
         context->IASetVertexBuffers(0u, 1u, VBuffer.GetAddressOf(), &stride, &offset);
-
-        ComPtr<ID3D11VertexShader> vS;
-        ComPtr<ID3DBlob> blb;
-        D3DReadFileToBlob(L"VertexShader.cso", &blb);
-        graphics->CreateVertexShader(blb->GetBufferPointer(), blb->GetBufferSize(), nullptr, &vS);
-        context->VSSetShader(vS.Get(), nullptr, 0u);
-
-        ComPtr<ID3D11InputLayout> inpl;
-        D3D11_INPUT_ELEMENT_DESC ied[] = {
-            {"POSITION",0,DXGI_FORMAT_R32G32_FLOAT,0,0,D3D11_INPUT_PER_VERTEX_DATA,0},
-            {"COLOR",0,DXGI_FORMAT_R8G8B8A8_UNORM,0,8u,D3D11_INPUT_PER_VERTEX_DATA,0}
-        };
-
-        graphics->CreateInputLayout(ied, (UINT)std::size(ied), blb->GetBufferPointer(), blb->GetBufferSize(), &inpl);
-        context->IASetInputLayout(inpl.Get());
-
-        ComPtr<ID3D11PixelShader> ps;
-        D3DReadFileToBlob(L"PixelShader.cso", &blb);
-        graphics->CreatePixelShader(blb->GetBufferPointer(), blb->GetBufferSize(), nullptr, &ps);
-        context->PSSetShader(ps.Get(), nullptr, 0u);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        context->OMSetRenderTargets(1u, target.GetAddressOf(), nullptr);
-        D3D11_VIEWPORT vp = {};
-        vp.TopLeftX = 0;
-        vp.TopLeftY = 0;
-        vp.Width = 1000;
-        vp.Height = 850;
-        vp.MaxDepth = 1;
-        vp.MinDepth = 0;
-        context->RSSetViewports(1u, &vp);
         swapchain->Present(1u, 0u);
         context->ClearRenderTargetView(target.Get(), color);
         context->Draw((UINT)std::size(vertices), 0u);
