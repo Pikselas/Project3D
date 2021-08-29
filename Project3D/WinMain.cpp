@@ -64,6 +64,58 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
     swapchain->GetBuffer(0, __uuidof(ID3D11Resource), &backBuffer);
     graphics->CreateRenderTargetView(backBuffer.Get(), nullptr, &target);
 
+    struct vertex
+    {
+        float x, y;
+        unsigned char r, g, b, a;
+    };
+    vertex vertices[] = {
+        {0.0f,0.5f,255,0,0},
+        {0.5f,-0.5f,0,255,0},
+        {-0.5f,-0.5f,0,0,255},
+        
+        {-0.3f,0.3f,0,255,0},
+        {0.3f,0.3f,0,255,0},
+        {0.0f,-0.8,255,0,0}
+    };
+    D3D11_BUFFER_DESC bd = { 0 };
+    bd.ByteWidth = sizeof(vertices);
+    bd.Usage = D3D11_USAGE_DEFAULT;
+    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    bd.CPUAccessFlags = 0u;
+    bd.MiscFlags = 0u;
+    bd.StructureByteStride = sizeof(vertex);
+    D3D11_SUBRESOURCE_DATA sd = { 0 };
+    sd.pSysMem = vertices;
+    ComPtr<ID3D11Buffer> VBuffer;
+    graphics->CreateBuffer(&bd, &sd, &VBuffer);
+    UINT stride = sizeof(vertex);
+    UINT offset = 0u;
+    context->IASetVertexBuffers(0u, 1u, VBuffer.GetAddressOf(), &stride, &offset);
+
+    const unsigned short indices[] = {
+        0,1,2,
+        2,3,0,
+        2,1,5,
+        0,4,1
+    };
+
+    ComPtr<ID3D11Buffer> indexBuff;
+    D3D11_BUFFER_DESC idb = { 0 };
+    idb.ByteWidth = sizeof(indices);
+    idb.Usage = D3D11_USAGE_DEFAULT;
+    idb.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    idb.CPUAccessFlags = 0u;
+    idb.MiscFlags = 0u;
+    idb.StructureByteStride = sizeof(unsigned short);
+
+    D3D11_SUBRESOURCE_DATA isdb = { 0 };
+    isdb.pSysMem = indices;
+
+    graphics->CreateBuffer(&idb, &isdb, &indexBuff);
+    context->IASetIndexBuffer(indexBuff.Get(), DXGI_FORMAT_R16_UINT, 0u);
+
+
     ComPtr<ID3D11VertexShader> vS;
     ComPtr<ID3DBlob> blb;
     D3DReadFileToBlob(L"VertexShader.cso", &blb);
@@ -83,7 +135,7 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
     D3DReadFileToBlob(L"PixelShader.cso", &blb);
     graphics->CreatePixelShader(blb->GetBufferPointer(), blb->GetBufferSize(), nullptr, &ps);
     context->PSSetShader(ps.Get(), nullptr, 0u);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     context->OMSetRenderTargets(1u, target.GetAddressOf(), nullptr);
     D3D11_VIEWPORT vp = {};
     vp.TopLeftX = 0;
@@ -103,44 +155,9 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        struct vertex
-        {
-            float x, y;
-            unsigned char r, g, b, a;
-        };
-        vertex vertices[] = {
-            {0.5f,0.5f,255,0,0},
-            {ptX,-ptY,0,255,0},
-
-            {-0.5f,-0.5f,100,255,0},
-            {ptX,-ptY,0,0,255},
-
-            {0.5f,-0.5f,105,0,102},
-            {ptX,-ptY,0,150,0},
-
-            {-0.5f,0.5f,10,30,20},
-            {ptX,-ptY,0,25,45},
-
-            {0.0f,0.0f,55,0,0},
-            {ptX,-ptY,0,120,0}
-        };
-        D3D11_BUFFER_DESC bd = { 0 };
-        bd.ByteWidth = sizeof(vertices);
-        bd.Usage = D3D11_USAGE_DEFAULT;
-        bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        bd.CPUAccessFlags = 0u;
-        bd.MiscFlags = 0u;
-        bd.StructureByteStride = sizeof(vertex);
-        D3D11_SUBRESOURCE_DATA sd = { 0 };
-        sd.pSysMem = vertices;
-        ComPtr<ID3D11Buffer> VBuffer;
-        graphics->CreateBuffer(&bd, &sd, &VBuffer);
-        UINT stride = sizeof(vertex);
-        UINT offset = 0u;
-        context->IASetVertexBuffers(0u, 1u, VBuffer.GetAddressOf(), &stride, &offset);
         swapchain->Present(1u, 0u);
         context->ClearRenderTargetView(target.Get(), color);
-        context->Draw((UINT)std::size(vertices), 0u);
+        context->DrawIndexed((UINT)std::size(indices), 0u, 0);
     }
     return 0;
 }
