@@ -4,6 +4,7 @@
 #include<d3dcompiler.h>
 #include<sstream>
 #include<chrono>
+#include<DirectXMath.h>
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib,"D3DCompiler.lib")
 
@@ -115,35 +116,8 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
     graphics->CreateBuffer(&idb, &isdb, &indexBuff);
     context->IASetIndexBuffer(indexBuff.Get(), DXGI_FORMAT_R16_UINT, 0u);
 
-    float angle = 0.1f;
-
-    struct constBuffer
-    {
-        float buff[4][4];
-    };
-
-    const constBuffer cbf =
-    {
-        {  (20/17) * std::cos(angle), (20/17) * std::sin(angle),  0.0f, 0.0f,
-           (20/17) * -std::sin(angle), (20/17) * std::cos(angle),  0.0f,   0.0f,
-             0.0f,              0.0f,           1.0f,   0.0f,
-             0.0f,              0.0f,           0.0f,   1.0f
-        }
-    };
-
-    ComPtr<ID3D11Buffer> constBuff;
-    D3D11_BUFFER_DESC cbd = { 0 };
-    cbd.ByteWidth = sizeof(cbf);
-    cbd.Usage = D3D11_USAGE_DYNAMIC;
-    cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    cbd.MiscFlags = 0u;
-    cbd.StructureByteStride = 0u;
-
-    D3D11_SUBRESOURCE_DATA cbsrd = { 0 };
-    cbsrd.pSysMem = &cbf;
-    graphics->CreateBuffer(&cbd, &cbsrd, &constBuff);
-    context->VSSetConstantBuffers(0u, 1u, constBuff.GetAddressOf());
+    std::chrono::steady_clock::time_point tp = std::chrono::steady_clock::now();
+    std::chrono::duration<float> dp;
 
     ComPtr<ID3D11VertexShader> vS;
     ComPtr<ID3DBlob> blb;
@@ -174,6 +148,7 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
     vp.MaxDepth = 1;
     vp.MinDepth = 0;
     context->RSSetViewports(1u, &vp);
+    using namespace DirectX;
     float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     while (true)
     {
@@ -184,6 +159,36 @@ int _stdcall WinMain(HINSTANCE hinstance, HINSTANCE hPrev, LPSTR lpcmd, int cmds
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+
+        dp = std::chrono::steady_clock::now() - tp;
+        float angle = dp.count();
+
+        struct constBuffer
+        {
+            XMMATRIX xmcb;
+        };
+
+        const constBuffer cbf =
+        {
+            {  
+                 XMMatrixTranspose(XMMatrixRotationZ(angle) * XMMatrixScaling(20/17,1.0f,1.0f))
+            }
+        };
+
+        ComPtr<ID3D11Buffer> constBuff;
+        D3D11_BUFFER_DESC cbd = { 0 };
+        cbd.ByteWidth = sizeof(cbf);
+        cbd.Usage = D3D11_USAGE_DYNAMIC;
+        cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        cbd.MiscFlags = 0u;
+        cbd.StructureByteStride = 0u;
+
+        D3D11_SUBRESOURCE_DATA cbsrd = { 0 };
+        cbsrd.pSysMem = &cbf;
+        graphics->CreateBuffer(&cbd, &cbsrd, &constBuff);
+        context->VSSetConstantBuffers(0u, 1u, constBuff.GetAddressOf());
+
         swapchain->Present(1u, 0u);
         context->ClearRenderTargetView(target.Get(), color);
         context->DrawIndexed((UINT)std::size(indices), 0u, 0);

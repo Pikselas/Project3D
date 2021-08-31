@@ -6,7 +6,7 @@ struct vtx
 
 cbuffer cbf
 {
-	row_major matrix transform;
+	matrix transform;
 };
 
 vtx main(float2 pos : POSITION, float3 col : COLOR)
